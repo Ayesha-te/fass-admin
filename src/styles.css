@@ -49,6 +49,18 @@ button.secondary {
   box-shadow: none;
 }
 
+button.danger-action {
+  background: linear-gradient(135deg, #9c3d2c 0%, #7e2719 100%);
+  color: #fff7f3;
+  box-shadow: 0 10px 24px rgba(126, 39, 25, 0.2);
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
 input,
 textarea,
 select {

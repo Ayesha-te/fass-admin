@@ -97,6 +97,7 @@ export default function App() {
   const [loggingIn, setLoggingIn] = useState(false);
   const [togglingTailorId, setTogglingTailorId] = useState(null);
   const [assigningOrderId, setAssigningOrderId] = useState(null);
+  const [resettingData, setResettingData] = useState(false);
 
   async function loadOverviewData(currentToken) {
     setLoading(true);
@@ -303,6 +304,36 @@ export default function App() {
     }
   }
 
+  async function resetTestData() {
+    if (resettingData) return;
+    const confirmed = window.confirm(
+      'This will permanently delete all customers, tailors, drivers, orders, deliveries, measurements, fabrics, and designs. Only the current admin account will remain. Do you want to continue?'
+    );
+
+    if (!confirmed) return;
+
+    setResettingData(true);
+    setError('');
+    try {
+      const result = await api.resetTestData(token);
+      setTailors([]);
+      setDrivers([]);
+      setOrders([]);
+      setFabrics([]);
+      setDesigns([]);
+      setAssignments({});
+      await loadOverviewData(token);
+      if (activePage !== 'dashboard') {
+        await loadActivePageData(token, activePage);
+      }
+      window.alert(result.detail || 'Test data deleted successfully.');
+    } catch (resetError) {
+      setError(resetError.message);
+    } finally {
+      setResettingData(false);
+    }
+  }
+
   function logout() {
     localStorage.removeItem('fass_admin_token');
     setToken('');
@@ -379,6 +410,11 @@ export default function App() {
         <SectionIntro
           title="Dashboard Summary"
           copy="This page stays focused on live business summary only, while full details stay in the dedicated sections."
+          action={
+            <button className="danger-action" onClick={resetTestData} disabled={resettingData}>
+              {resettingData ? 'Deleting...' : 'Delete All Test Data'}
+            </button>
+          }
         />
         {overview ? (
           <section className="stats-grid hero-stats">
