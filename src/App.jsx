@@ -163,6 +163,44 @@ export default function App() {
     loadActivePageData(token, activePage);
   }, [activePage, token]);
 
+  useEffect(() => {
+    if (!token) return;
+
+    const refreshCurrentPage = () => {
+      if (activePage === 'dashboard') {
+        loadOverviewData(token);
+        return;
+      }
+
+      loadActivePageData(token, activePage);
+    };
+
+    const handleWindowFocus = () => {
+      refreshCurrentPage();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshCurrentPage();
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refreshCurrentPage();
+      }
+    }, 10000);
+
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [activePage, token]);
+
   async function handleLogin(event) {
     event.preventDefault();
     if (loggingIn) return;
