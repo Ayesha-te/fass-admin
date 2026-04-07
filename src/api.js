@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8000/api';
+const BASE_URL = 'https://backend-13lk.onrender.com/api';
 const inflightRequests = new Map();
 
 function buildRequestKey(path, options = {}, token) {
