@@ -80,7 +80,7 @@ function SectionIntro({ title, copy, action }) {
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('fass_admin_token') || '');
   const [activePage, setActivePage] = useState('dashboard');
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [overview, setOverview] = useState(null);
   const [tailors, setTailors] = useState([]);
   const [drivers, setDrivers] = useState([]);
@@ -356,30 +356,37 @@ export default function App() {
   if (!token) {
     return (
       <main className="auth-shell">
-        <form className="panel auth-card" onSubmit={handleLogin}>
-          <p className="eyebrow">Fass Admin</p>
-          <h1>Operations Console</h1>
-          <p className="muted-copy">Log in with your admin account to manage orders, tailors, drivers, and design catalog items.</p>
-          <label>
-            Email
-            <input
-              value={loginForm.email}
-              onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
-            />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              value={loginForm.password}
-              onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
-            />
-          </label>
-          {error ? <div className="error">{error}</div> : null}
-          <button type="submit" disabled={loggingIn}>
-            {loggingIn ? 'Logging In...' : 'Log In'}
-          </button>
-        </form>
+        <section className="auth-stage auth-stage-simple panel">
+          <form className="auth-card" onSubmit={handleLogin}>
+            <div className="auth-card-header">
+              <p className="eyebrow">Fass Admin</p>
+              <h1>Login</h1>
+              <p className="muted-copy">Use your staff account to continue.</p>
+            </div>
+
+            <label>
+              Username
+              <input
+                placeholder="admin_username"
+                value={loginForm.username}
+                onChange={(event) => setLoginForm((current) => ({ ...current, username: event.target.value }))}
+              />
+            </label>
+            <label>
+              Password
+              <input
+                type="password"
+                placeholder="Enter your password"
+                value={loginForm.password}
+                onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
+              />
+            </label>
+            {error ? <div className="error">{error}</div> : null}
+            <button type="submit" disabled={loggingIn}>
+              {loggingIn ? 'Logging In...' : 'Log In'}
+            </button>
+          </form>
+        </section>
       </main>
     );
   }

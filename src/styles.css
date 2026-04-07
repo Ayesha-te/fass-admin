@@ -58,6 +58,16 @@ select {
   padding: 0.9rem 1rem;
   background: rgba(255, 252, 246, 0.96);
   color: #241b15;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: rgba(43, 102, 87, 0.45);
+  box-shadow: 0 0 0 4px rgba(43, 102, 87, 0.12);
+  background: #fffdf9;
 }
 
 textarea {
@@ -74,6 +84,21 @@ textarea {
   display: grid;
   place-items: center;
   padding: 2rem;
+}
+
+.auth-stage {
+  width: min(1080px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 420px);
+  gap: 1.5rem;
+  align-items: stretch;
+  padding: 1.5rem;
+}
+
+.auth-stage-simple {
+  width: min(520px, 100%);
+  grid-template-columns: 1fr;
+  padding: 0.75rem;
 }
 
 .admin-layout {
@@ -211,7 +236,29 @@ textarea {
 }
 
 .auth-card {
-  width: min(460px, 100%);
+  width: 100%;
+  display: grid;
+  gap: 1rem;
+  background: rgba(255, 252, 246, 0.96);
+  border: 1px solid rgba(220, 206, 188, 0.95);
+  box-shadow: 0 28px 70px rgba(83, 63, 37, 0.12);
+  padding: 1.75rem;
+}
+
+.auth-card button {
+  width: fit-content;
+  min-width: 160px;
+  padding-inline: 1.5rem;
+}
+
+.auth-card-header {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.auth-card-header h1 {
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  line-height: 0.95;
 }
 
 .section-intro {
@@ -249,6 +296,12 @@ p {
 label {
   display: grid;
   gap: 0.45rem;
+  color: #41372d;
+  font-weight: 700;
+}
+
+.auth-card label {
+  gap: 0.6rem;
 }
 
 .error {
@@ -393,6 +446,10 @@ label {
 
 @media (max-width: 1080px) {
   .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-stage {
     grid-template-columns: 1fr;
   }
 
