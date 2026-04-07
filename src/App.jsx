@@ -97,7 +97,6 @@ export default function App() {
   const [loggingIn, setLoggingIn] = useState(false);
   const [togglingTailorId, setTogglingTailorId] = useState(null);
   const [assigningOrderId, setAssigningOrderId] = useState(null);
-  const [updatingOrderId, setUpdatingOrderId] = useState(null);
 
   async function loadOverviewData(currentToken) {
     setLoading(true);
@@ -304,23 +303,6 @@ export default function App() {
     }
   }
 
-  async function updateOrderStatus(orderId, nextStatus) {
-    if (updatingOrderId === orderId) return;
-    setUpdatingOrderId(orderId);
-    setError('');
-    try {
-      await api.updateOrder(orderId, { status: nextStatus }, token);
-      await Promise.all([
-        loadOverviewData(token),
-        loadActivePageData(token, 'orders'),
-      ]);
-    } catch (updateError) {
-      setError(updateError.message);
-    } finally {
-      setUpdatingOrderId(null);
-    }
-  }
-
   function logout() {
     localStorage.removeItem('fass_admin_token');
     setToken('');
@@ -443,8 +425,7 @@ export default function App() {
               <article className="order-card" key={order.id}>
                 {(() => {
                   const displayStatus = normalizeOrderStatus(order.status);
-                  const canReview = displayStatus === 'Received';
-                  const canAssignDriver = !['Received', 'Delivered', 'Rejected'].includes(displayStatus);
+                  const canAssignDriver = displayStatus === 'Ready' && !order.assigned_driver_id;
 
                   return (
                     <>
@@ -473,16 +454,6 @@ export default function App() {
                   <span>Order notes</span>
                   <p>{order.notes || 'No notes added.'}</p>
                 </div>
-                {canReview ? (
-                  <div className="assign-row">
-                    <button onClick={() => updateOrderStatus(order.id, 'Accepted')} disabled={updatingOrderId === order.id}>
-                      {updatingOrderId === order.id ? 'Saving...' : 'Accept Order'}
-                    </button>
-                    <button className="secondary" onClick={() => updateOrderStatus(order.id, 'Rejected')} disabled={updatingOrderId === order.id}>
-                      {updatingOrderId === order.id ? 'Saving...' : 'Reject Order'}
-                    </button>
-                  </div>
-                ) : null}
                 {canAssignDriver ? (
                   <div className="assign-row">
                     <select
