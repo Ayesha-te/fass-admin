@@ -1,4 +1,5 @@
 const BASE_URL = 'https://backend-13lk.onrender.com/api';
+const REQUEST_TIMEOUT_MS = 30000;
 const inflightRequests = new Map();
 
 function buildRequestKey(path, options = {}, token) {
@@ -15,14 +16,29 @@ async function request(path, options = {}, token) {
   }
 
   const fetchPromise = (async () => {
-    const response = await fetch(`${BASE_URL}${path}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Token ${token}` } : {}),
-        ...(options.headers || {}),
-      },
-      ...options,
-    });
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    let response;
+
+    try {
+      response = await fetch(`${BASE_URL}${path}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Token ${token}` } : {}),
+          ...(options.headers || {}),
+        },
+        ...options,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('The server is taking too long to respond. Please try again.');
+      }
+      throw new Error('Cannot reach the server right now. Please try again.');
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
 
     const payload = await response.json().catch(() => ({}));
 

@@ -188,16 +188,20 @@ export default function App() {
     window.addEventListener('focus', handleWindowFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        refreshCurrentPage();
-      }
-    }, 10000);
+    const intervalId = activePage === 'dashboard'
+      ? window.setInterval(() => {
+          if (document.visibilityState === 'visible') {
+            refreshCurrentPage();
+          }
+        }, 60000)
+      : null;
 
     return () => {
       window.removeEventListener('focus', handleWindowFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.clearInterval(intervalId);
+      if (intervalId) {
+        window.clearInterval(intervalId);
+      }
     };
   }, [activePage, token]);
 
