@@ -55,6 +55,23 @@ function Field({ label, value }) {
   );
 }
 
+function ImageStrip({ title, images }) {
+  if (!images?.length) return null;
+
+  return (
+    <div className="media-block">
+      <span>{title}</span>
+      <div className="media-strip">
+        {images.map((image, index) => (
+          <a key={`${title}-${index}`} href={image} target="_blank" rel="noreferrer" className="media-thumb-link">
+            <img src={image} alt={`${title} ${index + 1}`} className="media-thumb" loading="lazy" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function EmptyState({ title, copy }) {
   return (
     <div className="empty-state">
@@ -489,6 +506,10 @@ export default function App() {
                   <Field label="Design" value={order.design_name} />
                   <Field label="Fabric" value={`${order.fabric_name || ''} ${order.fabric_color || ''}`.trim()} />
                   <Field label="Assigned driver" value={order.assigned_driver_name} />
+                </div>
+                <div className="order-media-grid">
+                  <ImageStrip title="Design Images" images={order.design_images?.length ? order.design_images : order.design_image ? [order.design_image] : []} />
+                  <ImageStrip title="Fabric Images" images={order.fabric_images?.length ? order.fabric_images : order.fabric_image ? [order.fabric_image] : []} />
                 </div>
                 <div className="notes-block">
                   <span>Order notes</span>

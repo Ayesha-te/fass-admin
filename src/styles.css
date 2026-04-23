@@ -142,9 +142,12 @@ textarea {
 .entity-stack,
 .list,
 .stack,
+.media-block,
+.media-strip,
 .sidebar-metrics,
 .notes-block,
 .order-grid,
+.order-media-grid,
 .field-grid,
 .section-intro,
 .order-header,
@@ -428,6 +431,38 @@ label {
   padding: 1rem;
   background: rgba(242, 233, 220, 0.55);
   border-radius: 18px;
+}
+
+.order-media-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.media-block span {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a6436;
+}
+
+.media-strip {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.media-thumb-link {
+  display: block;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid #e7dac9;
+  background: rgba(255, 255, 255, 0.8);
+  min-height: 120px;
+}
+
+.media-thumb {
+  display: block;
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  background: #f8f3ec;
 }
 
 .list-item {
