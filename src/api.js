@@ -1,6 +1,8 @@
 const BASE_URL = 'https://backend-13lk.onrender.com/api';
 const REQUEST_TIMEOUT_MS = 30000;
 const inflightRequests = new Map();
+const responseCache = new Map();
+const GET_CACHE_TTL_MS = 30000;
 
 function buildUrl(path, query = {}) {
   const searchParams = new URLSearchParams();
@@ -21,6 +23,13 @@ function buildRequestKey(path, options = {}, token, query = {}) {
 
 async function request(path, options = {}, token, query = {}) {
   const requestKey = buildRequestKey(path, options, token, query);
+  const method = (options.method || 'GET').toUpperCase();
+  const cacheEntry = responseCache.get(requestKey);
+
+  if (method === 'GET' && cacheEntry && cacheEntry.expiresAt > Date.now()) {
+    return cacheEntry.data;
+  }
+
   const existingRequest = inflightRequests.get(requestKey);
   if (existingRequest) {
     return existingRequest;
@@ -55,6 +64,15 @@ async function request(path, options = {}, token, query = {}) {
 
     if (!response.ok) {
       throw new Error(payload.detail || payload.non_field_errors?.[0] || 'Request failed');
+    }
+
+    if (method === 'GET') {
+      responseCache.set(requestKey, {
+        expiresAt: Date.now() + GET_CACHE_TTL_MS,
+        data: payload,
+      });
+    } else {
+      responseCache.clear();
     }
 
     return payload;
