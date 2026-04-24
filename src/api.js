@@ -2,14 +2,25 @@ const BASE_URL = 'https://backend-13lk.onrender.com/api';
 const REQUEST_TIMEOUT_MS = 30000;
 const inflightRequests = new Map();
 
-function buildRequestKey(path, options = {}, token) {
-  const method = (options.method || 'GET').toUpperCase();
-  const body = typeof options.body === 'string' ? options.body : '';
-  return JSON.stringify([method, path, token || '', body]);
+function buildUrl(path, query = {}) {
+  const searchParams = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+  const queryString = searchParams.toString();
+  return `${BASE_URL}${path}${queryString ? `?${queryString}` : ''}`;
 }
 
-async function request(path, options = {}, token) {
-  const requestKey = buildRequestKey(path, options, token);
+function buildRequestKey(path, options = {}, token, query = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const body = typeof options.body === 'string' ? options.body : '';
+  return JSON.stringify([method, path, token || '', body, query]);
+}
+
+async function request(path, options = {}, token, query = {}) {
+  const requestKey = buildRequestKey(path, options, token, query);
   const existingRequest = inflightRequests.get(requestKey);
   if (existingRequest) {
     return existingRequest;
@@ -22,7 +33,7 @@ async function request(path, options = {}, token) {
     let response;
 
     try {
-      response = await fetch(`${BASE_URL}${path}`, {
+      response = await fetch(buildUrl(path, query), {
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Token ${token}` } : {}),
@@ -65,7 +76,7 @@ export const api = {
   getTailors: (token) => request('/admin/tailors/', {}, token),
   updateTailor: (id, payload, token) =>
     request(`/admin/tailors/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
-  getDrivers: (token) => request('/admin/drivers/', {}, token),
+  getDrivers: (token, query) => request('/admin/drivers/', {}, token, query),
   updateDriver: (id, payload, token) =>
     request(`/admin/drivers/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   getOrders: (token) => request('/admin/orders/', {}, token),

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { api } from './api';
 
+const ADMIN_REFRESH_GAP_MS = 15000;
+
 const defaultFabric = {
   material: '',
   color: '',
@@ -115,8 +117,10 @@ export default function App() {
   const [togglingTailorId, setTogglingTailorId] = useState(null);
   const [assigningOrderId, setAssigningOrderId] = useState(null);
   const [resettingData, setResettingData] = useState(false);
+  const [lastRefreshAt, setLastRefreshAt] = useState(0);
 
   async function loadOverviewData(currentToken) {
+    setLastRefreshAt(Date.now());
     setLoading(true);
     setError('');
     try {
@@ -130,13 +134,14 @@ export default function App() {
   }
 
   async function loadActivePageData(currentToken, page = activePage) {
+    setLastRefreshAt(Date.now());
     setLoading(true);
     setError('');
     try {
       if (page === 'orders') {
         const [orderData, driverData] = await Promise.all([
           api.getOrders(currentToken),
-          api.getDrivers(currentToken),
+          api.getDrivers(currentToken, { summary: 1 }),
         ]);
         setOrders(orderData);
         setDrivers(driverData);
@@ -183,7 +188,10 @@ export default function App() {
   useEffect(() => {
     if (!token) return;
 
-    const refreshCurrentPage = () => {
+    const refreshCurrentPage = (force = false) => {
+      if (!force && Date.now() - lastRefreshAt < ADMIN_REFRESH_GAP_MS) {
+        return;
+      }
       if (activePage === 'dashboard') {
         loadOverviewData(token);
         return;
@@ -208,7 +216,7 @@ export default function App() {
     const intervalId = activePage === 'dashboard'
       ? window.setInterval(() => {
           if (document.visibilityState === 'visible') {
-            refreshCurrentPage();
+            refreshCurrentPage(true);
           }
         }, 60000)
       : null;
@@ -220,7 +228,7 @@ export default function App() {
         window.clearInterval(intervalId);
       }
     };
-  }, [activePage, token]);
+  }, [activePage, lastRefreshAt, token]);
 
   async function handleLogin(event) {
     event.preventDefault();
