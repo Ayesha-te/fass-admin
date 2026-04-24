@@ -483,6 +483,74 @@ label {
   margin-bottom: 0.8rem;
 }
 
+.image-source-group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.image-source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.upload-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  border: 1px dashed #c9af8d;
+  background: rgba(248, 243, 236, 0.82);
+  color: #654728;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.upload-picker:hover {
+  background: rgba(243, 231, 214, 0.95);
+  border-color: #b89062;
+  transform: translateY(-1px);
+}
+
+.upload-picker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-clear {
+  min-width: auto;
+  padding-inline: 1rem;
+}
+
+.upload-hint,
+.upload-caption {
+  margin: 0;
+  color: #6b625a;
+  font-size: 0.84rem;
+}
+
+.upload-preview {
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid #e7dac9;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.upload-preview img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  background: #f8f3ec;
+}
+
 .empty-state {
   padding: 2.5rem 1.5rem;
   border: 1px dashed #d6c6b2;

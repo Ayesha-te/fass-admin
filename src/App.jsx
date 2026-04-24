@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { api } from './api';
+import { api, API_ORIGIN } from './api';
 
 const ADMIN_REFRESH_GAP_MS = 15000;
 
@@ -57,6 +57,22 @@ function Field({ label, value }) {
   );
 }
 
+function normalizeAdminImageUrl(value) {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '';
+  if (normalized.startsWith('//')) return `https:${normalized}`;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(normalized)) return normalized;
+  if (normalized.startsWith('/')) return `${API_ORIGIN}${normalized}`;
+  return normalized;
+}
+
+function revokePreviewUrl(value) {
+  const normalized = String(value || '').trim();
+  if (normalized.startsWith('blob:')) {
+    URL.revokeObjectURL(normalized);
+  }
+}
+
 function ImageStrip({ title, images }) {
   if (!images?.length) return null;
 
@@ -64,11 +80,15 @@ function ImageStrip({ title, images }) {
     <div className="media-block">
       <span>{title}</span>
       <div className="media-strip">
-        {images.map((image, index) => (
-          <a key={`${title}-${index}`} href={image} target="_blank" rel="noreferrer" className="media-thumb-link">
-            <img src={image} alt={`${title} ${index + 1}`} className="media-thumb" loading="lazy" />
-          </a>
-        ))}
+        {images.map((image, index) => {
+          const resolvedImage = normalizeAdminImageUrl(image);
+          if (!resolvedImage) return null;
+          return (
+            <a key={`${title}-${index}`} href={resolvedImage} target="_blank" rel="noreferrer" className="media-thumb-link">
+              <img src={resolvedImage} alt={`${title} ${index + 1}`} className="media-thumb" loading="lazy" />
+            </a>
+          );
+        })}
       </div>
     </div>
   );
@@ -96,6 +116,53 @@ function SectionIntro({ title, copy, action }) {
   );
 }
 
+function canPreviewImage(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return (
+    normalized.startsWith('blob:') ||
+    normalized.startsWith('http://') ||
+    normalized.startsWith('https://') ||
+    normalized.startsWith('//') ||
+    normalized.startsWith('/')
+  );
+}
+
+function ImageSourceField({
+  value,
+  previewSrc,
+  placeholder,
+  fileInputKey,
+  fileLabel,
+  previewAlt,
+  onValueChange,
+  onFileChange,
+  onClear,
+}) {
+  return (
+    <div className="image-source-group">
+      <input placeholder={placeholder} value={value} onChange={(event) => onValueChange(event.target.value)} />
+      <p className="upload-hint">Paste an image URL or choose an image from your computer.</p>
+      <div className="image-source-actions">
+        <label className="upload-picker">
+          <input key={fileInputKey} type="file" accept="image/*" onChange={onFileChange} />
+          <span>Select From Computer</span>
+        </label>
+        {value || previewSrc ? (
+          <button type="button" className="secondary upload-clear" onClick={onClear}>
+            Clear Image
+          </button>
+        ) : null}
+      </div>
+      {fileLabel ? <p className="upload-caption">Selected file: {fileLabel}</p> : null}
+      {canPreviewImage(previewSrc || value) ? (
+        <div className="upload-preview">
+          <img src={normalizeAdminImageUrl(previewSrc || value)} alt={previewAlt} loading="lazy" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('fass_admin_token') || '');
   const [activePage, setActivePage] = useState('dashboard');
@@ -118,6 +185,14 @@ export default function App() {
   const [assigningOrderId, setAssigningOrderId] = useState(null);
   const [resettingData, setResettingData] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState(0);
+  const [fabricImageLabel, setFabricImageLabel] = useState('');
+  const [designImageLabel, setDesignImageLabel] = useState('');
+  const [fabricImageFile, setFabricImageFile] = useState(null);
+  const [designImageFile, setDesignImageFile] = useState(null);
+  const [fabricImagePreview, setFabricImagePreview] = useState('');
+  const [designImagePreview, setDesignImagePreview] = useState('');
+  const [fabricFileInputKey, setFabricFileInputKey] = useState(0);
+  const [designFileInputKey, setDesignFileInputKey] = useState(0);
 
   async function loadOverviewData(currentToken) {
     setLastRefreshAt(Date.now());
@@ -230,6 +305,11 @@ export default function App() {
     };
   }, [activePage, lastRefreshAt, token]);
 
+  useEffect(() => () => {
+    revokePreviewUrl(fabricImagePreview);
+    revokePreviewUrl(designImagePreview);
+  }, [fabricImagePreview, designImagePreview]);
+
   async function handleLogin(event) {
     event.preventDefault();
     if (loggingIn) return;
@@ -270,8 +350,24 @@ export default function App() {
     setSavingFabric(true);
     setError('');
     try {
-      await api.createFabric({ ...fabricForm, price: Number(fabricForm.price) }, token);
+      const normalizedImage = fabricForm.image.trim();
+      await api.createFabric(
+        {
+          ...fabricForm,
+          image: fabricImageFile ? '' : normalizedImage,
+          images: !fabricImageFile && normalizedImage ? [normalizedImage] : [],
+          image_file: fabricImageFile,
+          image_files: fabricImageFile ? [fabricImageFile] : [],
+          price: Number(fabricForm.price),
+        },
+        token
+      );
+      revokePreviewUrl(fabricImagePreview);
       setFabricForm(defaultFabric);
+      setFabricImageLabel('');
+      setFabricImageFile(null);
+      setFabricImagePreview('');
+      setFabricFileInputKey((current) => current + 1);
       await Promise.all([
         loadOverviewData(token),
         loadActivePageData(token, 'designs'),
@@ -289,9 +385,14 @@ export default function App() {
     setSavingDesign(true);
     setError('');
     try {
+      const normalizedImage = designForm.image.trim();
       await api.createDesign(
         {
           ...designForm,
+          image: designImageFile ? '' : normalizedImage,
+          images: !designImageFile && normalizedImage ? [normalizedImage] : [],
+          image_file: designImageFile,
+          image_files: designImageFile ? [designImageFile] : [],
           base_price: Number(designForm.base_price),
           compatible_fabrics: designForm.compatible_fabrics
             .split(',')
@@ -300,7 +401,12 @@ export default function App() {
         },
         token
       );
+      revokePreviewUrl(designImagePreview);
       setDesignForm(defaultDesign);
+      setDesignImageLabel('');
+      setDesignImageFile(null);
+      setDesignImagePreview('');
+      setDesignFileInputKey((current) => current + 1);
       await Promise.all([
         loadOverviewData(token),
         loadActivePageData(token, 'designs'),
@@ -310,6 +416,58 @@ export default function App() {
     } finally {
       setSavingDesign(false);
     }
+  }
+
+  function handleFabricImageSelection(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setError('');
+    if (!String(file.type || '').startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+
+    revokePreviewUrl(fabricImagePreview);
+    setFabricImageFile(file);
+    setFabricImagePreview(URL.createObjectURL(file));
+    setFabricForm((current) => ({ ...current, image: '' }));
+    setFabricImageLabel(file.name);
+  }
+
+  function handleDesignImageSelection(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setError('');
+    if (!String(file.type || '').startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+
+    revokePreviewUrl(designImagePreview);
+    setDesignImageFile(file);
+    setDesignImagePreview(URL.createObjectURL(file));
+    setDesignForm((current) => ({ ...current, image: '' }));
+    setDesignImageLabel(file.name);
+  }
+
+  function clearFabricImage() {
+    revokePreviewUrl(fabricImagePreview);
+    setFabricForm((current) => ({ ...current, image: '' }));
+    setFabricImageLabel('');
+    setFabricImageFile(null);
+    setFabricImagePreview('');
+    setFabricFileInputKey((current) => current + 1);
+  }
+
+  function clearDesignImage() {
+    revokePreviewUrl(designImagePreview);
+    setDesignForm((current) => ({ ...current, image: '' }));
+    setDesignImageLabel('');
+    setDesignImageFile(null);
+    setDesignImagePreview('');
+    setDesignFileInputKey((current) => current + 1);
   }
 
   async function assignDriver(orderId) {
@@ -692,7 +850,23 @@ export default function App() {
               <input placeholder="Material" value={fabricForm.material} onChange={(event) => setFabricForm((current) => ({ ...current, material: event.target.value }))} />
               <input placeholder="Color" value={fabricForm.color} onChange={(event) => setFabricForm((current) => ({ ...current, color: event.target.value }))} />
               <input placeholder="Price" value={fabricForm.price} onChange={(event) => setFabricForm((current) => ({ ...current, price: event.target.value }))} />
-              <input placeholder="Image URL" value={fabricForm.image} onChange={(event) => setFabricForm((current) => ({ ...current, image: event.target.value }))} />
+              <ImageSourceField
+                value={fabricForm.image}
+                previewSrc={fabricImagePreview}
+                placeholder="Image URL"
+                fileInputKey={fabricFileInputKey}
+                fileLabel={fabricImageLabel}
+                previewAlt="Fabric preview"
+                onValueChange={(value) => {
+                  revokePreviewUrl(fabricImagePreview);
+                  setFabricForm((current) => ({ ...current, image: value }));
+                  setFabricImageFile(null);
+                  setFabricImagePreview('');
+                  setFabricImageLabel('');
+                }}
+                onFileChange={handleFabricImageSelection}
+                onClear={clearFabricImage}
+              />
               <input placeholder="Shop" value={fabricForm.shop} onChange={(event) => setFabricForm((current) => ({ ...current, shop: event.target.value }))} />
               <textarea placeholder="Description" value={fabricForm.description} onChange={(event) => setFabricForm((current) => ({ ...current, description: event.target.value }))} />
               <button type="submit" disabled={savingFabric}>
@@ -706,7 +880,23 @@ export default function App() {
             <div className="stack">
               <input placeholder="Title" value={designForm.title} onChange={(event) => setDesignForm((current) => ({ ...current, title: event.target.value }))} />
               <input placeholder="Category" value={designForm.category} onChange={(event) => setDesignForm((current) => ({ ...current, category: event.target.value }))} />
-              <input placeholder="Image URL" value={designForm.image} onChange={(event) => setDesignForm((current) => ({ ...current, image: event.target.value }))} />
+              <ImageSourceField
+                value={designForm.image}
+                previewSrc={designImagePreview}
+                placeholder="Image URL"
+                fileInputKey={designFileInputKey}
+                fileLabel={designImageLabel}
+                previewAlt="Design preview"
+                onValueChange={(value) => {
+                  revokePreviewUrl(designImagePreview);
+                  setDesignForm((current) => ({ ...current, image: value }));
+                  setDesignImageFile(null);
+                  setDesignImagePreview('');
+                  setDesignImageLabel('');
+                }}
+                onFileChange={handleDesignImageSelection}
+                onClear={clearDesignImage}
+              />
               <input placeholder="Designer" value={designForm.designer} onChange={(event) => setDesignForm((current) => ({ ...current, designer: event.target.value }))} />
               <input placeholder="Base price" value={designForm.base_price} onChange={(event) => setDesignForm((current) => ({ ...current, base_price: event.target.value }))} />
               <input placeholder="Raw Silk, Linen" value={designForm.compatible_fabrics} onChange={(event) => setDesignForm((current) => ({ ...current, compatible_fabrics: event.target.value }))} />
