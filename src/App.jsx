@@ -39,6 +39,15 @@ function normalizeOrderStatus(status) {
   return status;
 }
 
+function formatCurrency(value) {
+  const amount = Number(value || 0);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'AED',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 function StatCard({ label, value, tone = 'sand' }) {
   return (
     <div className={`stat-card tone-${tone}`}>
@@ -200,7 +209,7 @@ export default function App() {
     setError('');
     try {
       const overviewData = await api.getOverview(currentToken);
-      setOverview(overviewData.counts);
+      setOverview(overviewData);
     } catch (loadError) {
       setError(loadError.message);
     } finally {
@@ -543,13 +552,17 @@ export default function App() {
     [drivers]
   );
 
-  const dashboardCards = overview
+  const overviewCounts = overview?.counts || null;
+  const overviewInsights = overview?.insights || null;
+
+  const dashboardCards = overviewCounts
     ? [
-        { label: 'Customers', value: overview.customers, tone: 'sand' },
-        { label: 'Tailors', value: overview.tailors, tone: 'olive' },
-        { label: 'Drivers', value: overview.drivers, tone: 'blue' },
-        { label: 'Orders', value: overview.orders, tone: 'clay' },
-        { label: 'Pending Assignments', value: overview.pending_assignments, tone: 'rose' },
+        { label: 'Total Users', value: overviewCounts.total_users, tone: 'sand' },
+        { label: 'Customers', value: overviewCounts.customers, tone: 'olive' },
+        { label: 'Tailors', value: overviewCounts.tailors, tone: 'blue' },
+        { label: 'Drivers', value: overviewCounts.drivers, tone: 'clay' },
+        { label: 'Orders', value: overviewCounts.orders, tone: 'rose' },
+        { label: 'Pending Assignments', value: overviewCounts.pending_assignments, tone: 'sand' },
       ]
     : [];
 
@@ -596,7 +609,7 @@ export default function App() {
       <div className="page-stack">
         <SectionIntro
           title="Dashboard Summary"
-          copy="This page stays focused on live business summary only, while full details stay in the dedicated sections."
+          copy="Track total platform users, order activity, and purchasing performance from one live admin overview."
           action={
             <button className="danger-action" onClick={resetTestData} disabled={resettingData}>
               {resettingData ? 'Deleting...' : 'Delete All Test Data'}
@@ -612,20 +625,142 @@ export default function App() {
         ) : null}
         <section className="grid dashboard-grid">
           <div className="panel spotlight-card">
-            <p className="eyebrow">Orders</p>
-            <h3>{overview?.orders ?? 0} live orders in system</h3>
+            <p className="eyebrow">Users</p>
+            <h3>{overviewCounts?.total_users ?? 0} active platform users</h3>
+            <p className="muted-copy">
+              Customers {overviewCounts?.customers ?? 0}, tailors {overviewCounts?.tailors ?? 0}, drivers {overviewCounts?.drivers ?? 0}.
+            </p>
           </div>
           <div className="panel spotlight-card">
-            <p className="eyebrow">Tailors</p>
-            <h3>{overview?.featured_tailors ?? 0} featured tailors</h3>
+            <p className="eyebrow">Order Activity</p>
+            <h3>{overviewInsights?.orders_today ?? 0} orders placed today</h3>
+            <p className="muted-copy">
+              {overviewInsights?.orders_last_7_days ?? 0} in the last 7 days and {overviewInsights?.orders_last_30_days ?? 0} in the last 30 days.
+            </p>
           </div>
           <div className="panel spotlight-card">
-            <p className="eyebrow">Drivers</p>
-            <h3>{overview?.available_drivers ?? 0} available drivers</h3>
+            <p className="eyebrow">Purchasing</p>
+            <h3>{formatCurrency(overviewInsights?.gross_revenue ?? 0)} gross sales</h3>
+            <p className="muted-copy">
+              {formatCurrency(overviewInsights?.paid_revenue ?? 0)} paid revenue with an average order value of {formatCurrency(overviewInsights?.average_order_value ?? 0)}.
+            </p>
           </div>
           <div className="panel spotlight-card">
             <p className="eyebrow">Design Catalog</p>
-            <h3>{overview?.designs ?? 0} designs and {overview?.fabrics ?? 0} fabrics</h3>
+            <h3>{overviewCounts?.designs ?? 0} designs and {overviewCounts?.fabrics ?? 0} fabrics</h3>
+            <p className="muted-copy">
+              {overviewCounts?.featured_tailors ?? 0} featured tailors and {overviewCounts?.available_drivers ?? 0} available drivers.
+            </p>
+          </div>
+        </section>
+        <section className="grid dashboard-grid">
+          <div className="panel">
+            <p className="eyebrow">Order Activity Insights</p>
+            <h3>Operational momentum</h3>
+            <div className="field-grid">
+              <div className="field-row">
+                <span>Orders Today</span>
+                <strong>{overviewInsights?.orders_today ?? 0}</strong>
+              </div>
+              <div className="field-row">
+                <span>Last 7 Days</span>
+                <strong>{overviewInsights?.orders_last_7_days ?? 0}</strong>
+              </div>
+              <div className="field-row">
+                <span>Last 30 Days</span>
+                <strong>{overviewInsights?.orders_last_30_days ?? 0}</strong>
+              </div>
+              <div className="field-row">
+                <span>Delivered Orders</span>
+                <strong>{overviewInsights?.delivered_orders ?? 0}</strong>
+              </div>
+              <div className="field-row">
+                <span>Paid Orders</span>
+                <strong>{overviewInsights?.paid_orders ?? 0}</strong>
+              </div>
+              <div className="field-row">
+                <span>Pending Assignments</span>
+                <strong>{overviewCounts?.pending_assignments ?? 0}</strong>
+              </div>
+            </div>
+          </div>
+          <div className="panel">
+            <p className="eyebrow">Purchasing Insights</p>
+            <h3>Buyer and revenue view</h3>
+            <div className="field-grid">
+              <div className="field-row">
+                <span>Gross Revenue</span>
+                <strong>{formatCurrency(overviewInsights?.gross_revenue ?? 0)}</strong>
+              </div>
+              <div className="field-row">
+                <span>Paid Revenue</span>
+                <strong>{formatCurrency(overviewInsights?.paid_revenue ?? 0)}</strong>
+              </div>
+              <div className="field-row">
+                <span>Revenue Last 30 Days</span>
+                <strong>{formatCurrency(overviewInsights?.revenue_last_30_days ?? 0)}</strong>
+              </div>
+              <div className="field-row">
+                <span>Average Order</span>
+                <strong>{formatCurrency(overviewInsights?.average_order_value ?? 0)}</strong>
+              </div>
+              <div className="field-row">
+                <span>Unique Buyers</span>
+                <strong>{overviewInsights?.unique_buyers ?? 0}</strong>
+              </div>
+              <div className="field-row">
+                <span>Repeat Buyers</span>
+                <strong>{overviewInsights?.repeat_buyers ?? 0}</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section className="grid dashboard-grid">
+          <div className="panel">
+            <p className="eyebrow">Order Status Breakdown</p>
+            <h3>Where orders currently stand</h3>
+            <div className="list compact">
+              {overviewInsights?.status_breakdown?.length ? (
+                overviewInsights.status_breakdown.map((item) => (
+                  <div className="list-item" key={item.label}>
+                    <div>
+                      <strong>{item.label}</strong>
+                      <p>{item.count} order{item.count === 1 ? '' : 's'}</p>
+                    </div>
+                    <span>{item.count}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="muted-copy">No order activity recorded yet.</p>
+              )}
+            </div>
+          </div>
+          <div className="panel">
+            <p className="eyebrow">Payment Mix</p>
+            <h3>How customers are paying</h3>
+            {overviewInsights?.top_payment_method ? (
+              <div className="notes-block">
+                <span>Top payment method</span>
+                <p>
+                  {overviewInsights.top_payment_method.label} is leading with {overviewInsights.top_payment_method.count} orders worth {formatCurrency(overviewInsights.top_payment_method.amount)}.
+                </p>
+              </div>
+            ) : null}
+            <div className="list compact">
+              {overviewInsights?.payment_breakdown?.length ? (
+                overviewInsights.payment_breakdown.map((item) => (
+                  <div className="list-item" key={item.label}>
+                    <div>
+                      <strong>{item.label}</strong>
+                      <p>{item.count} order{item.count === 1 ? '' : 's'} • {formatCurrency(item.amount)}</p>
+                    </div>
+                    <span>{item.count}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="muted-copy">No payment insight is available yet.</p>
+              )}
+            </div>
           </div>
         </section>
       </div>
@@ -977,12 +1112,16 @@ export default function App() {
           <p className="eyebrow">Quick Summary</p>
           <div className="sidebar-metrics">
             <div>
+              <span>Users</span>
+              <strong>{overviewCounts?.total_users ?? 0}</strong>
+            </div>
+            <div>
               <span>Orders</span>
-              <strong>{overview?.orders ?? 0}</strong>
+              <strong>{overviewCounts?.orders ?? 0}</strong>
             </div>
             <div>
               <span>Pending</span>
-              <strong>{overview?.pending_assignments ?? 0}</strong>
+              <strong>{overviewCounts?.pending_assignments ?? 0}</strong>
             </div>
           </div>
           <button className="secondary" onClick={logout}>
