@@ -165,6 +165,7 @@ export const api = {
   login: (payload) => request('/auth/login/', { method: 'POST', body: JSON.stringify(payload) }),
   getOverview: (token) => request('/admin/overview/', {}, token),
   resetTestData: (token) => request('/admin/reset-test-data/', { method: 'POST' }, token),
+  getUsers: (token) => request('/admin/users/', {}, token),
   getTailors: (token) => request('/admin/tailors/', {}, token),
   updateTailor: (id, payload, token) =>
     request(`/admin/tailors/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }, token),

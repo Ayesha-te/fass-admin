@@ -28,6 +28,7 @@ const defaultDesign = {
 const navItems = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'orders', label: 'Orders' },
+  { key: 'users', label: 'Users' },
   { key: 'tailors', label: 'Tailors' },
   { key: 'drivers', label: 'Drivers' },
   { key: 'designs', label: 'Designs' },
@@ -180,6 +181,7 @@ export default function App() {
   const [tailors, setTailors] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [users, setUsers] = useState([]);
   const [fabrics, setFabrics] = useState([]);
   const [designs, setDesigns] = useState([]);
   const [fabricForm, setFabricForm] = useState(defaultFabric);
@@ -229,6 +231,12 @@ export default function App() {
         ]);
         setOrders(orderData);
         setDrivers(driverData);
+        return;
+      }
+
+      if (page === 'users') {
+        const userData = await api.getUsers(currentToken);
+        setUsers(userData);
         return;
       }
 
@@ -845,6 +853,94 @@ export default function App() {
     );
   }
 
+  function renderUsers() {
+    const sortedUsers = [...users].sort((a, b) => {
+      const aTime = a.login_time ? new Date(a.login_time).getTime() : 0;
+      const bTime = b.login_time ? new Date(b.login_time).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    return (
+      <div className="page-stack">
+        <SectionIntro
+          title="Users"
+          copy="View all users with their login/logout activity. Monitor who is currently logged in."
+          action={<span className="page-chip">{users.length} total users</span>}
+        />
+        {!users.length ? (
+          <EmptyState title="No users yet" copy="User accounts will appear here once they are created." />
+        ) : (
+          <section>
+            <div style={{ overflowX: 'auto', marginBottom: '2rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e0e0e0', backgroundColor: '#fafafa' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Name</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Email</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Role</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Status</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Login Time</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Logout Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedUsers.map((user) => (
+                    <tr key={user.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <td style={{ padding: '12px' }}>
+                        <strong>{user.full_name}</strong>
+                      </td>
+                      <td style={{ padding: '12px' }}>{user.email}</td>
+                      <td style={{ padding: '12px' }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '4px 8px',
+                            backgroundColor: user.role === 'admin' ? '#ffe0e0' : user.role === 'tailor' ? '#e0f0ff' : user.role === 'driver' ? '#e0ffe0' : '#f0f0f0',
+                            borderRadius: '4px',
+                            fontSize: '0.8rem',
+                            fontWeight: '500',
+                            textTransform: 'capitalize',
+                          }}
+                        >
+                          {user.role}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        {user.login_time ? (
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '4px 8px',
+                              backgroundColor: '#e0ffe0',
+                              color: '#2d662d',
+                              borderRadius: '4px',
+                              fontSize: '0.85rem',
+                              fontWeight: '500',
+                            }}
+                          >
+                            Logged In
+                          </span>
+                        ) : (
+                          <span style={{ color: '#999', fontSize: '0.9rem' }}>Never</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '0.85rem' }}>
+                        {user.login_time ? new Date(user.login_time).toLocaleString() : 'N/A'}
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '0.85rem' }}>
+                        {user.logout_time ? new Date(user.logout_time).toLocaleString() : user.login_time && !user.logout_time ? 'Still logged in' : 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  }
+
   function renderTailors() {
     return (
       <div className="page-stack">
@@ -1143,6 +1239,7 @@ export default function App() {
 
         {activePage === 'dashboard' ? renderDashboard() : null}
         {activePage === 'orders' ? renderOrders() : null}
+        {activePage === 'users' ? renderUsers() : null}
         {activePage === 'tailors' ? renderTailors() : null}
         {activePage === 'drivers' ? renderDrivers() : null}
         {activePage === 'designs' ? renderDesigns() : null}
