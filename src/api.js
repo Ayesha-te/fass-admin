@@ -187,4 +187,6 @@ export const api = {
     const prepared = prepareRequestBody(payload);
     return request('/admin/designs/', { method: 'POST', body: prepared.body }, token);
   },
+  updateDesign: (id, payload, token) =>
+    request(`/admin/designs/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
 };

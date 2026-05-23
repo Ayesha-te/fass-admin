@@ -20,6 +20,7 @@ const defaultDesign = {
   image: '',
   description: '',
   designer: '',
+  uploaded_by: '',
   base_price: '',
   compatible_fabrics: '',
   is_active: true,
@@ -193,6 +194,7 @@ export default function App() {
   const [savingDesign, setSavingDesign] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
   const [togglingTailorId, setTogglingTailorId] = useState(null);
+  const [togglingDesignId, setTogglingDesignId] = useState(null);
   const [assigningOrderId, setAssigningOrderId] = useState(null);
   const [resettingData, setResettingData] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState(0);
@@ -251,12 +253,14 @@ export default function App() {
       }
 
       if (page === 'designs') {
-        const [fabricData, designData] = await Promise.all([
+        const [fabricData, designData, tailorData] = await Promise.all([
           api.getFabrics(currentToken),
           api.getDesigns(currentToken),
+          api.getTailors(currentToken),
         ]);
         setFabrics(fabricData);
         setDesigns(designData);
+        setTailors(tailorData);
       }
     } catch (loadError) {
       setError(loadError.message);
@@ -361,6 +365,23 @@ export default function App() {
     }
   }
 
+  async function toggleDesignActive(design) {
+    if (togglingDesignId === design.id) return;
+    setTogglingDesignId(design.id);
+    setError('');
+    try {
+      await api.updateDesign(design.id, { is_active: !design.is_active }, token);
+      await Promise.all([
+        loadOverviewData(token),
+        loadActivePageData(token, 'designs'),
+      ]);
+    } catch (toggleError) {
+      setError(toggleError.message);
+    } finally {
+      setTogglingDesignId(null);
+    }
+  }
+
   async function submitFabric(event) {
     event.preventDefault();
     if (savingFabric) return;
@@ -406,6 +427,7 @@ export default function App() {
       await api.createDesign(
         {
           ...designForm,
+          uploaded_by: designForm.uploaded_by ? Number(designForm.uploaded_by) : null,
           image: designImageFile ? '' : normalizedImage,
           images: !designImageFile && normalizedImage ? [normalizedImage] : [],
           image_file: designImageFile,
@@ -559,6 +581,13 @@ export default function App() {
     () => drivers.filter((driver) => driver.is_available),
     [drivers]
   );
+
+  const activeDesignCount = useMemo(
+    () => designs.filter((design) => design.is_active).length,
+    [designs]
+  );
+
+  const hiddenDesignCount = designs.length - activeDesignCount;
 
   const overviewCounts = overview?.counts || null;
   const overviewInsights = overview?.insights || null;
@@ -1071,7 +1100,7 @@ export default function App() {
         <SectionIntro
           title="Designs and Fabrics"
           copy="Manage the catalog that customers see in the app, including new designs and fabrics."
-          action={<span className="page-chip">{designs.length} designs</span>}
+          action={<span className="page-chip">{activeDesignCount} live / {hiddenDesignCount} hidden</span>}
         />
         <section className="grid dashboard-grid">
           <form className="panel form-panel" onSubmit={submitFabric}>
@@ -1128,10 +1157,26 @@ export default function App() {
                 onFileChange={handleDesignImageSelection}
                 onClear={clearDesignImage}
               />
+              <select value={designForm.uploaded_by} onChange={(event) => setDesignForm((current) => ({ ...current, uploaded_by: event.target.value }))}>
+                <option value="">Assign later / not linked to a tailor shop</option>
+                {tailors.map((tailor) => (
+                  <option key={tailor.id} value={tailor.id}>
+                    {tailor.shop_name || tailor.name} ({tailor.name})
+                  </option>
+                ))}
+              </select>
               <input placeholder="Designer" value={designForm.designer} onChange={(event) => setDesignForm((current) => ({ ...current, designer: event.target.value }))} />
               <input placeholder="Base price" value={designForm.base_price} onChange={(event) => setDesignForm((current) => ({ ...current, base_price: event.target.value }))} />
               <input placeholder="Raw Silk, Linen" value={designForm.compatible_fabrics} onChange={(event) => setDesignForm((current) => ({ ...current, compatible_fabrics: event.target.value }))} />
               <textarea placeholder="Description" value={designForm.description} onChange={(event) => setDesignForm((current) => ({ ...current, description: event.target.value }))} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(designForm.is_active)}
+                  onChange={(event) => setDesignForm((current) => ({ ...current, is_active: event.target.checked }))}
+                />
+                Visible to customers
+              </label>
               <button type="submit" disabled={savingDesign}>
                 {savingDesign ? 'Saving...' : 'Save Design'}
               </button>
@@ -1168,8 +1213,24 @@ export default function App() {
                     <div>
                       <strong>{design.title}</strong>
                       <p>{design.category} - {design.designer || 'No designer'}</p>
+                      <p>{design.tailor_shop_name || design.tailor_name ? `Shop: ${design.tailor_shop_name || design.tailor_name}` : 'Shop: not assigned'}</p>
+                      <p>{design.is_active ? 'Visible in customer app' : 'Hidden from customer app'}</p>
                     </div>
-                    <span>{design.base_price}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span>{design.base_price}</span>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => toggleDesignActive(design)}
+                        disabled={togglingDesignId === design.id}
+                      >
+                        {togglingDesignId === design.id
+                          ? 'Saving...'
+                          : design.is_active
+                            ? 'Hide'
+                            : 'Publish'}
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (
